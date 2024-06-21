@@ -1,0 +1,602 @@
+---
+title: "IntroComp_Final"
+author: "Weixuan Chen"
+date: "04/23/2023"
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Unless otherwise specified, assume all $\alpha$ (p-value) thresholds to be `0.05`, and all tests to be two-sided if that is an option. All calculations may be done with `R` or by hand unless otherwise specified. Please show and explain your work as much as possible, using latex for displaying all math.
+
+
+#### 1. You roll five six-sided dice. Write a script in R to calculate the probability of getting between 15 and 20 (inclusive) as the total amount of your roll (ie, the sum when you add up what is showing on all five dice). Exact solutions are preferable but approximate solutions are ok as long as they are precise.
+
+```{r}
+sum(sample(6, 5, replace=TRUE)) 
+```
+
+
+```{r}
+results <- 0
+count <- 0
+for (i in 1:10000) {
+  result <- sum(sample(6, 5, replace=TRUE)) 
+  if (result >= 15 & result <= 20) {
+    count <- count + 1
+  }
+}
+
+count/10000
+
+```
+The final result is around 0.56.
+
+
+#### 2. Create a simulated dataset of 100 observations, where x is a random normal variable with mean 0 and standard deviation 1, and $y = 0.1 + 2 x + \epsilon$, where epsilon is also a random normal error with mean 0 and sd 1. (One reminder: remember that in creating simulated data with, say, 100 observations, you need to use `rnorm(100)` for epsilon, not `rnorm(1)`, to ensure that each observation gets a different error.)
+
+```{r}
+x <- rnorm(100)
+epsilon <- rnorm(100)
+y <- 0.1 + 2 * x + epsilon
+```
+
+
+##### a. Perform a t test for whether the mean of Y equals the mean of X using $R$.
+
+```{r}
+t.test(y, x)
+
+```
+We can see the p-value is 0.7, so we do not have enough evidence to reject the null hypothesis.
+
+##### b. Now perform this test by hand using just the first 5 observations. Please write out all your steps in latex.
+
+- find the means for y and x, and denote them as $\bar{y}$ and $\bar{x}$ respectively:
+```{r}
+y.bar <- mean(y[1:5])
+x.bar <- mean(x[1:5])
+```
+- Calculate the standard error using
+$${se_{1} = {s_{1}/\sqrt{n_1}}}$$ and $${se_{2} = {s_{2}/\sqrt{n_2}}}$$ 
+
+```{r}
+se1 <- sd(y[1:5])/sqrt(5)
+se2 <- sd(x[1:5])/sqrt(5)
+```
+- Calculate the t-statistics by taking a difference in the means and divide it by the standard error.
+$${t = {y_{diff}/\sqrt{se_1^2 + se_2^2}}}$$
+
+```{r}
+t <- (y.bar - x.bar) / sqrt(se1^2 + se2^2)
+```
+
+- Find the degrees of freedom to calculate the critical value using
+$$df = \frac{(s_{1}^2/n_{1} + s_{2}^2/n_{2})^2}{\frac{(s_{1}^2/n_{1})^2}{n_{1}-1}+\frac{(s_{2}^2/n_{2})^2}{n_{2}-1}}$$
+```{r}
+s1 <- sd(y[1:5]); s2 <- sd(x[1:5])
+df <- (s1^2/5 + s2^2/5)^2 / ( (s1^2/5)^2/(5-1) + (s2^2/5)^2/(5-1) )
+qt(0.975, df)
+```
+- For 5 observations using $\alpha=0.05$, if $|t|$ is larger than $2.487286$, we reject the null hypothesis that the mean of $y$ is equal to that of $x$ at 5% significance level. 
+
+```{r}
+paste("t =", t)
+t > 2.476224
+df
+```
+
+```{r}
+t.test(y[1:5], x[1:5])
+```
+R test agrees with our manually calculated result.
+
+##### c. Using R, test whether the mean of Y is significantly different from 0.
+
+```{r}
+t.test(y, mu = 0)
+```
+We can see the p-value is larger than 0.05, so we do not have enough evidence to reject the null hypothesis.
+
+##### d. Again using the first five obsevations, test by hand whether the mean of Y is different from 0.
+
+- find the means for y as $\bar{y}$:
+```{r}
+(y.bar <- mean(y[1:5]))
+```
+- Calculate the standard error using
+$$ s.e. = \frac{s}{\sqrt{n}}$$
+where $s$ is a standard deviation for $y$ and $n$ the sample size of $y$, 5 in this case.
+```{r}
+s <- sd(y[1:5])
+s.e. <- s / sqrt(5)
+```
+- Calculate the t-statistics using:
+
+```{r}
+t <- y.bar / s.e.
+```
+- Degrees of freedom is 5-1 =4
+- Find the critical value for $alpha$=0.05:
+```{r}
+qt(0.975, 4)
+```
+- For 5 observations using $\alpha=0.05$, if $|t|$ is larger than $2.776445$, we reject the null hypothesis that the mean of $y$ is equal to that of $x$ at 5% significance level. 
+
+```{r}
+paste("t =", t)
+t > 2.776445
+```
+
+```{r}
+t.test(y[1:5], mu = 0)
+```
+We can see the R test result agrees with our manually calculated result.
+
+##### e. Assuming the mean and sd of Y that you calculate from the first five observations would not change, what is the minimum total number of observations you would need to be able to conclude that the mean of Y is different from 0 at the p = 0.01 confidence level?
+
+We shall find the smallest $n$ such that 
+$$ |z| = \left|\frac{\bar{y}-0}{s/\sqrt{n}}\right|> 2.575829$$
+
+```{r}
+# Starting from 2
+n <- 2
+
+while(TRUE){
+  #Calculate the t-statistic
+  z <- abs(y.bar/(s/sqrt(n)))
+  #Calculate the corresponding t-score with right df
+  t <- qt(p=.01/2, df=n-1, lower.tail=FALSE)
+  if(z > t){ # If z > t, the test statistic is significant, so we break the loop
+    break
+  }
+  else{ # Otherwise, we increase the count by 1
+    n <- n + 1
+  }
+}
+n
+```
+
+
+##### f. Verify (d) (approximately) by increasing the simulated data to the n you calculated in (e) that would be necessary. If the test of Y = 0 is still not significant, explain why. (Go back to using the original 100-observation dataset for g and h.)
+
+```{r}
+z <- mean(y[1:n])/(sd(y[1:n])/sqrt(n))
+abs(z)
+```
+
+We can run a simulation by the following:
+
+```{r}
+count <- 0
+for (i in 1:100000) {
+  x <- rnorm(n)
+  epsilon <- rnorm(n)
+  y <- 0.1 + 2 * x + epsilon
+  z <- mean(y)/(sd(y)/sqrt(n))
+  if (abs(z) > 2.575829) {
+    count <- count + 1
+  }
+}
+count / 100000
+
+```
+As a result of the simulation $10^5$ times, the sampled `z` exceeds `2.575829` about 1.7%, larger than our expectation. The discrepancy probably is attributed to the fact that the sample mean and the sample standard deviation is more precise than the one calculated from 5 observations. 
+
+##### g. Createacategorical(factor)variablec,where $c=1$ if $x<−1$, $c=3$ if $x>1$,and $c=2$ otherwise. Use $R$ to perform an F test for whether the mean of y differs across these three groups.
+
+```{r}
+c <- x
+for (i in 1:length(x)) {
+  if (x[i] < -1) {
+    c[i] <- 1
+  } else if (x[i] > 1) {
+    c[i] <- 3
+  } else {
+    c[i] <- 2
+  }
+}
+c <- as.factor(c)
+data <- data.frame(y=y, c=c)
+fit <- aov(y ~ c, data=data)
+summary(fit)
+```
+
+
+##### h. Using the first three observations for each group, calculate the same F test by hand.
+
+1. Find the group mean for each three group
+2. Find the grand mean for all $ys$ as `y.grouped`.
+3. Calculate the total sum of squares by summing squares of each y with mean subtracted, denoted as $SS_{total}$.
+4. Calculate the error sum of squares by finding the sum of squares for each category using the mean for the category, and sum the sum**s** of squares or , denoted as $SS_{error}$
+5. Calculate the treatment sum of squares by $SS_{total} - SS_{error}$
+6. Calculate the degrees of freedom for $SS_{treatment}, and $SS_{error}$, which are
+  $(k-1)$ and $(n-1)$ respectively where $k$ is the number of categories, and $n$ is the sample size.
+  
+7. Calcuate F-statistics by
+$$ F = \frac{SS_{treatment}/(k-1)}{SS_{error}/(n-k)}$$
+```{r}
+y.grouped <- split(y, c)
+y1 <- y.grouped$`1`[1:3]
+y2 <- y.grouped$`2`[1:3]
+y3 <- y.grouped$`3`[1:3]
+y.mean <- mean(y)
+SS.total <- sum((y-y.mean)^2)
+SS.total
+
+y1.bar <- mean(y1)
+y2.bar <- mean(y2)
+y3.bar <- mean(y3)
+SS.error <- sum((y1-y1.bar)^2+(y2-y2.bar)^2+(y3-y3.bar)^2)
+SS.treatment <- SS.total - SS.error
+```
+
+We reject the null hypothesis if F-statitics is greater than $5.143253$ at 5% significance level. 
+
+```{r}
+(fstat <- (SS.treatment/(3-1)) / (SS.error/(9-3)))
+fstat > qf(0.95, 3-1, 9-3)
+```
+
+
+#### 3. Generate a new 100-observation dataset as before, except now $y = 0.1 + 0.2 x + \epsilon$
+```{r}
+x <- rnorm(100)
+epsilon <- rnorm(100)
+y <- 0.1 + 0.2 * x + epsilon
+```
+
+
+##### a. Regress y on x using R, and report the results.
+```{r}
+result <- lm(y~x)
+summary(result)
+```
+
+##### b. Discuss the coefficient on x and its standard error, and present the 95% CI.
+
+The standard error is basically the standard deviation of the estimate where the estimate is a random variable. The value of The coefficients implies that an increase in $x$ by 1.0 increases $y$ by the estimated slope on average.
+
+```{r}
+confint(result)
+```
+
+##### c. Use R to calculate the p-value on the coefficient on x from the t value for that coefficient. What does this p-value represent (be very precise in your language here)?
+
+```{r}
+t.value <- summary(result)$coefficients[[6]]
+pt(abs(t.value), 98, lower.tail=FALSE)*2
+```
+The p-value here help determine whether the relationship observed in our sample also exist in the larger population. The linear regression p-value for each independent variable tests the null hypothesis that the variable has no correlation with the dependent variable. If there is no correlation, there is no association between the changes in the independent variable and the shifts in the dependent variable. In other words, there is insufficient evidence to conclude that there is an effect at the population level.
+
+##### d. Discuss the F-statistic and its p-value, and calculate that p-value from the F statistic using R. What does this test and its p-value indicate?
+
+```{r}
+summary(aov(result))
+```
+
+F-statistis on the R output is comparing the null model (with only constant) and the regression model (with one variable) by comparing the fits $R^2$ between them. The F test for linear regression shows if there is at least one variable having relationship with the response variable. This test has p-value 0.146, which is not significant. So we cannot reject the null hypothesis and the coefficient of x could be 0.
+
+##### e. Using the first five observations, calculate by hand the coefficient on x, its standard error, and the adjusted $R^2$. Be sure to show your work.
+
+```{r}
+x1 <- x[1:5]; y1 <- y[1:5]
+x1
+y1
+```
+
+```{r}
+x1.bar <- mean(x1); y1.bar <- mean(y1)
+x1.bar
+y1.bar
+```
+
+$${slope = \frac{\sum(x_1-\bar{x}_1)(y_1-\bar{y}_1)}{\sum(x_1-\bar{x}_1)^2}}$$
+```{r}
+slope <- sum((x1-x1.bar)*(y1-y1.bar))/sum((x1-x1.bar)^2)
+intercept <- y1.bar - x1.bar * slope
+print(paste0("The coefficients are: ", intercept, " and ", slope))
+```
+
+
+```{r}
+y1.hat <- intercept + slope*x1
+e <- y1 - y1.hat
+sigma <- sqrt(sum(e*e)/(5-2))
+var.x <- sigma^2/sum(x1*x1)
+se.x <- sqrt(sigma^2/sum((x1-x1.bar)^2))
+```
+$${SST = \sum{(y_1-\bar{y}_1)^2}}$$
+$${SSE = \sum{(y_1-\hat{y}_1)^2}}$$
+```{r}
+SST <- sum((y1-y1.bar)^2)
+SSE <- sum((y1-y1.hat)^2)
+SSR <- SST-SSE
+
+R2 <- SSR/SST
+adjusted.R2 <- 1-(1-R2)*(5-1)/(5-1-1)
+c(slope, se.x, adjusted.R2)
+```
+
+#### 4. Now generate $y=0.1+0.2x−0.5x^2+ \epsilon$ with 100 observations.
+```{r}
+x <- rnorm(100)
+epsilon <- rnorm(100)
+y <- 0.1 + 0.2 * x -0.5 * x^2 + epsilon
+```
+
+##### a. Regress y on x and x2 and report the results. If x or x2 are not statistically significant, suggest why.
+
+```{r}
+fit <- lm(y~poly(x, 2, raw = TRUE))
+summary(fit)
+```
+
+```{r}
+fit <- lm(y~poly(x, 2))
+summary(fit)
+```
+The relationship between x and y is not linear, that's why p-value of x is not significant but that of x^2 is.
+
+##### b. Based on the known coefficients that we used to create y, what is the effect on y of increasing x by 1 unit from 1 to 2?
+
+```{r}
+(0.1 + 0.2 * 2 - 0.5 * 2^2) - (0.1 + 0.2 * 1 - 0.5 * 1^2)
+```
+
+##### c. Based on the coefficients estimated from 4(a), what is the effect on y of changing x from -0.5 to -0.7?
+
+```{r}
+predict(fit, new=data.frame(x=-0.7)) - predict(fit, new=data.frame(x=-0.5)) 
+```
+
+#### 5. Now generate x2 as a random normal variable with a mean of -1 and a sd of 1. Create a new dataset where y = 0.1+0.2∗x−0.5∗x∗x2 +ε.
+
+```{r}
+x2 <- rnorm(100, mean=-1, sd=1)
+y <- 0.1 + 0.2 * x - 0.5 * x * x2 + epsilon
+
+```
+
+##### a. Based on the known coefficients, what is the effect of increasing x2 from 0 to 1 with x held at its mean?
+
+```{r}
+x.bar <- mean(x)
+(0.1 + 0.2 * x.bar - 0.5 * x.bar * 1) - (0.1 + 0.2 * x.bar - 0.5 * x.bar * 0)
+
+```
+
+##### b. Regress y on x, x2, and their interaction. Based on the regression-estimated coefficients, what is the effect on y of shifting x from -0.5 to -0.7 with x2 held at 1?
+
+```{r}
+fit <- lm(y ~ x + x2 + x:x2)
+predict(fit, data.frame(x=-0.7, x2=1)) - predict(fit, data.frame(x=-0.5, x2=1))
+
+```
+
+##### c. Regress the current y on x alone. Using the R2 from this regression and the R2 from 5(b), perform by hand an F test of the complete model (5b) against the reduced, bivariate model. What does this test tell you?
+
+```{r}
+fit1 <- lm(y~x)
+fit2 <- lm(y ~ x + x2 + x:x2)
+R2.1 <- summary(fit1)$r.squared
+R2.2 <- summary(fit2)$r.squared
+
+Fstat <- ((R2.2-R2.1)/2) / ( (1-R2.2)/(100-3-1)   )
+Fstat
+qf(0.95, 2, 100-3-1)
+Fstat > qf(0.95, 2, 100-3-1)
+```
+For my randomly generate data, F-test rejected the null hypothesis that the simple regression model is a good model. Despite the fact that the interaction terms is not included in the model. 
+
+
+#### 6. Generate a new variable y2 using the data from (5) which is 1 if y > 0 and 0 otherwise.
+
+```{r}
+y2 <- 1*(y>0)
+```
+
+##### a. Perform a logistic regression of y2 on x, x2, and their interaction, and interpret the results.
+
+```{r}
+data <- data.frame(y2=y2, x=x, x2=x2 )
+fit <- glm(y2 ~ x + x2 + x*x2, data = data, family=binomial)
+summary(fit)
+```
+We can see only the p-value of interaction term is significant. We can conclude that only the interaction term has relationship with response variable.
+
+####b. What is the effect of increasing x2 from 0 to 1 with x held at its mean on the probability that y2 is 1?
+
+```{r}
+x.bar <- mean(x)
+predict(fit, data.frame(x=x.bar, x2=1), type="response") - predict(fit, data.frame(x=x.bar, x2=0), type="response")
+
+```
+
+#### 7. Generate a dataset with 300 observations and three variables: f, x1, and x2. f should be a factor with three levels, where level 1 corresponds to observations 1-100, level 2 to 101-200, and level 3 to 201-300. (Eg, f can be “a” for the first 100 observations, “b” for the second 100, and “c” for the third 100.) Create x1 such that the first 100 observations have a mean of 1 and sd of 2; the second 100 have a mean of 0 and sd of 1;and the third 100 have a mean of 1 and sd of 0.5. Create x2 such that the first 100 observations have a mean of 1 and sd of 2; the second 100 have a mean of 1 and sd of 1; and the third 100 have a mean of 0 and sd of 0.5. (Hint: It is probably easiest to create three 100-observation datasets first, and then stack them with rbind(). And make sure to convert f to a factor before proceeding.)
+
+```{r}
+set.seed(123)
+n <- 100
+f <- c(rep("a", n), rep("b", n), rep("c", n))
+f <- as.factor(f)
+x1 <- c(rnorm(n, 1, 2), rnorm(n, 0, 1), rnorm(n, 1, 0.5))
+x2 <- c(rnorm(n, 1, 2), rnorm(n, 1, 1), rnorm(n, 0, 0.5))
+
+# data <- data.frame(x1=x1, x2=x2, f=f)
+# plot(x2~x1, col=f,data=data, asp=1)
+```
+
+
+a. Using the k-means algorithm, peform a cluster analysis of these data using a k of 3 (use only x1 and x2 in your calculations; use f only to verify your results). Comparing your clusters with f, how many datapoints are correctly classified into the correct cluster? How similar are the centroids from your analysis to the true centers?
+
+```{r}
+library(psych)
+set.seed(123)
+data1 <- as.data.frame(cbind(x1, x2, f))
+kout <- kmeans(data1[,1:2], centers=3, nstart=1000)
+print(kout$centers)
+data1$cluster <- as.vector(kout$cluster)
+data1$f <- f
+table(data1[c("f","cluster")])
+```
+Centroids from kmeans and true means from normal distributions are not very similar, but they can still distinguish themselves from other clusters, especially for the third cluster of x1 which is quite close to 1, the true mean. 
+
+The c cluster performs very well, and b cluster performs ok , and a cluster performs a little bit bad.
+
+b. Perform a factor analysis of this data using your preferred function. Using the scree plot, how many factors do you think you should include? Speculate about how these results relate to those you got with the cluster analysis.
+
+
+```{r}
+pca <- prcomp(data1[c("x1","x2")])
+summary(pca)
+```
+
+The first principal compoent accounts for roughly 57% of data, and the second 43%. Because they are comparable and either of them does not dominate the other, we should include x1 and x2. It also is consistent to our data generation process; x1 and x2 are supposed to be uncorrelated.
+
+```{r}
+covm <- cov(data1[c("x1","x2")])
+eigenm <- eigen(covm)
+plot(eigenm$values,type="b")
+```
+From the scree plot we can also conclude that two variables should be kept by looking at the value of each point.
+
+I think factor analysis can cluster analysis both group or reduce the number of variables into a smaller set of factors/clusters.
+
+### 8. Generate a dataset of 200 observations, this time with 90 independent variables, each of mean 0 and sd 1. 
+
+Create y such that:
+
+y=2x1 +...+2x30 −x31 −...−x60 +0∗x61 +...+0∗x90 +ε
+
+where $\epsilon$ is a random normal variable with mean 0 and sd 10. (Ie, the first 30 x’s have a coefficient
+of 2; the next 30 have a coefficient of -1; and the last 30 have a coefficient of 0.)
+
+```{r}
+X <- matrix(rnorm(200*90, 0, 1), nrow=200)
+beta <- matrix(c(rep(2, 30), rep(-1, 30), rep(0, 30)), ncol=1)
+epsilon <- matrix(rnorm(200, 0, 10), ncol=1)
+
+y <- X%*%beta + epsilon
+```
+
+
+
+#### a. Perform an elastic net regression of y on all the x variables using just the first 100 observations. Use 10-fold cross-validation to find the best value of $\lambda$ and approximately the best value of $\alpha$.
+```{r}
+library(caret)
+library(glmnet)
+```
+
+```{r}
+get_best_result = function(caret_fit) {
+  best = which(rownames(caret_fit$results) == rownames(caret_fit$bestTune))
+  best_result = caret_fit$results[best, ]
+  rownames(best_result) = NULL
+  best_result
+}
+```
+
+```{r}
+set.seed(42)
+cv_10 = trainControl(method = "cv", number = 10)
+X <- as.data.frame(X)
+data <- data.frame(y=y[1:100], X=X[1:100,])
+elnet = train(y~., data=data, method = "glmnet", trControl = cv_10)
+get_best_result(elnet)
+```
+
+
+#### b. How accurate are your coefficients from (a)? Summarize your results any way you like, but please don’t give us the raw coefficients from 90 variables.
+
+```{r}
+X100 <- as.matrix(X)[1:100, ]
+y100 <- y[1:100]
+fit_elnet_cv <- cv.glmnet(X100, y100, alpha=0.5, intercept=FALSE)
+fit_elnet_cv$lambda.min
+```
+
+
+```{r}
+sum(coef(fit_elnet_cv)!=0)
+```
+Overall, we have 33/90 coefficients are approximately matched.
+
+#### c. Using the results from (b), predict y for the second 100 observations. How accurate is your prediction?
+
+```{r}
+beta <- matrix(coef(fit_elnet_cv)[-1], ncol=1)
+X200 <- as.matrix(X[101:200, ])
+y200 <- y[101:200]
+eln.e <- y200 - X200%*%beta
+eln.mse <- mean(eln.e*eln.e)
+eln.mse
+```
+
+
+#### d. Attempt to compare the predictive accuracy here to the accuracy of a prediction made using regular multiple regression. Explain your results, including if the regular regression failed for any reason.
+
+
+```{r}
+lm.100 <- lm(y100~X100)
+lm.beta.fit <- coef(lm.100)
+yhat.lm <- cbind(1,X200) %*% lm.beta.fit
+mean((y200 - yhat.lm)^2)
+```
+We can see the MSE is 10+ times than elastic net. A possible reason for such bad performance of regular regression is the overfitting. The regularization term in either lasso or ridge can help the overfitting, but for regular regression, we have 90 variables here which very likely cause the overfitting.
+
+### 9. As in problem 6,use the data from 8 to generate a new y2 that is 1 if y>0 and 0 otherwise.
+```{r}
+y2 <- 1*(y>0)
+library(e1071)
+```
+
+#### a. Using the same process as in 8, estimate an SVM model of y2 on all the x variables for the first 100 variables. Use 10-fold cross-validation to select the best kernel.
+
+
+```{r}
+dat <- data.frame(X100, y=as.factor(y2[1:100]))
+svmfit.lm = svm(y ~ ., data = dat, kernel = "linear", scale = FALSE, type="C-classification")
+
+tc <- tune.control(cross = 10)
+y2.100 <- as.factor(y2[1:100])
+svmcv.lm <- tune.svm(X100, y =y2.100, kernel="linear", tunecontrol = tc, scale=FALSE, type="C-classification")
+svmcv.poly <- tune.svm(X100, y =y2.100, kernel="polynomial", tunecontrol = tc, scale=FALSE, type="C-classification")
+svmcv.radial <- tune.svm(X100, y =y2.100, kernel="radial", tunecontrol = tc, scale=FALSE, type="C-classification")
+svmcv.sigmoid <- tune.svm(X100, y =y2.100, kernel="sigmoid", tunecontrol = tc, scale=FALSE, type="C-classification")
+summary(svmcv.lm)
+summary(svmcv.poly)
+summary(svmcv.radial)
+summary(svmcv.sigmoid)
+```
+
+
+#### b. Using the results from (a), predict y2 for the second 100 observations, and report your accuracy.
+
+```{r}
+y2.200 <- y2[101:200]
+pred <- predict(svmcv.sigmoid$best.model, X200)
+sum(pred==y2.200)/100
+```
+
+
+```{r}
+y2.200 <- y2[101:200]
+pred <- predict(svmcv.lm$best.model, X200)
+sum(pred==y2.200)/100
+```
+
+
+```{r}
+y2.200 <- y2[101:200]
+pred <- predict(svmcv.radial$best.model, X200)
+sum(pred==y2.200)/100
+```
+
+Since the error estimation of four models keep changing, I select the three models with close error estimate, and it turns out that the highest accuracy is the sigmoid kernel.

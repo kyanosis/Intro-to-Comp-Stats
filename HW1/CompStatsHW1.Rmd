@@ -1,0 +1,149 @@
+---
+title: "Homework1"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+## 1.a
+
+```{r}
+v1<-2:6
+v2<-5:9
+print(v1)
+print(v2)
+```
+
+## 1.b
+
+```{r}
+v2 - v1
+```
+
+## 1.c
+
+```{r}
+v1%*%v2
+```
+
+v1*v2 = 2*5+3*6+4*7+5*8+6*9 = 10+18+28+40+54= 150
+
+## 1.d
+
+```{r}
+v3<-v1+v2
+
+for (i in 1:length(v3)) {
+  if(v3[i] > 10){
+    v3[i] = 0
+  }
+}
+
+v3
+```
+
+## 2.a
+
+```{r}
+c1<-1:25
+m1<-matrix(c1,nrow=5, ncol=5)
+m1
+```
+
+## 2.b
+
+```{r}
+m1%*%v1
+```
+
+## 2.c
+
+```{r}
+v1%*%m1
+```
+
+## 2.d
+
+```{r}
+m1%*%t(m1)
+```
+
+## 3.a
+
+```{r}
+df <- data.frame(matrix(NA,nrow = 5,ncol = 3))
+
+mydates <- c("2023-01-09", "2023-01-10", "2023-01-11", "2023-01-12", "2023-01-13")
+
+df$X1<-as.Date(mydates)
+df$X2<-c("Harry Potter", "Transformer", "Men in Black", "Kung Fu Panda", "Star Trek")
+df$X3 = c(102, 125, 165, 93, 88)
+
+colnames(df) <- c('Date','Movie most rented','Number')
+
+df
+```
+
+## 3.b
+
+```{r}
+str(df)
+```
+
+## 3.c
+
+```{r}
+write.csv(df,"CompStats1.csv", row.names=FALSE)
+
+df2 = read.csv(file = "CompStats1.csv")
+
+df2
+```
+
+## 3.d
+
+```{r}
+df_new<-df[c(1, 3, 5), c(1:2)]
+df_new
+```
+
+## 3.e
+
+```{r}
+df["Number"][df["Number"]%%2 == 0] <- 0
+
+df
+```
+
+## 3.f
+
+```{r}
+lst<-list(v1, v2, m1, df)
+
+names(lst)<-c("v1", "v2", "m1", "df")
+
+lst
+```
+
+```{r}
+lst[[3]][,2]
+```
+
+## 4.a
+
+$$
+f(x) = ax^2 + bx + c
+$$
+
+$$
+x = \frac{-b \pm \sqrt{b^2 + 4ac}}{2a}
+$$

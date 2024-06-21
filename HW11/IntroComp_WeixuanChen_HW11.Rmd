@@ -1,0 +1,117 @@
+---
+title: "IntroComp_WeixuanChen_HW11"
+author: "Weixuan Chen"
+date: "4/9/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(psych)
+data(bfi)
+bfi <- na.omit(bfi)
+bfi_new <- scale(bfi)
+bfi_new <- data.frame(bfi_new)
+```
+
+## 1
+
+```{r}
+pcaA<- prcomp(bfi_new)
+pcaA1 <- pcaA$rotation[,1]
+pcaA_stdev <- pcaA$sdev
+pcaA_stdev_squared<- pcaA_stdev^2
+```
+
+```{r}
+plot(pcaA_stdev_squared)
+```
+
+Here, 7 factors can be retained as seen from the elbow, and it explains 90% variance.
+
+## 2
+
+```{r}
+library(GPArotation)
+fact <- fa(bfi_new, nfactors = 2)
+fact1 <- fact$loadings[,1] # Extracting the loadings
+# ordering the loadings in descending order
+fact1[order(fact1)] # First factor
+```
+The lowest scoring variables (denoted by negative sign) represent a person who is not a positive person, is introvert and doesnot do things in the right manner; whereas the higher scoring variables represent a positive person who is extrovert, educated, confident, cares about others, does things rightly and takes charge of things.
+
+```{r}
+# 2nd factor
+fact2 <- fact$loadings[,2]
+fact2[order(fact2)]
+```
+
+The 2nd factor looks shows a picture of 2 personalities: Consolidated, patient and energetic person Vs Impatient and Irritable person.
+
+## 3
+
+```{r}
+kmeans_bfi <- kmeans(bfi_new,centers=2,nstart=25)
+```
+
+```{r}
+centroids <- kmeans_bfi$centers
+topvars_cent1 <- centroids[1,order(centroids[1,])]
+topvars_cent2 <- centroids[2,order(centroids[2,])]
+tail(topvars_cent1)
+```
+
+The first cluster suggests a negative personality  who gets angry, depressed and wastes time. It agrees with negative variables we get in first PCA.
+
+```{r}
+tail(topvars_cent2)
+```
+
+The second cluster represents a positive perosnality who is friendly, helps,  comforts and captivates others. It agrees with positive variables in first PCA.
+
+Comparison with factor loadings of first two clusters:
+
+Each factor has two directions in our case and we also see clear directions in factor loadings. 
+
+In our case the first factor are two personalities: One is not positive, introvert and doesnot do things in right manner Vs a positive person who is confident, takes charge of things and cares about others.
+
+The second factor are: A patient and energetic personality Vs an Pmatient and irritable personality
+
+Compared to PCA, Clusters make us focus more on variables that have high scores but not directions; the first cluster depicts a negative perosnality who gets angry, depressed and wastes time whereas the second cluster depicts friendly perosnality, who is helpful and comforting to others.
+
+## 4
+
+```{r}
+hierachy_bfi <- hclust(dist(bfi_new),method="complete")
+plot(hierachy_bfi,labels=FALSE)
+abline(a=16.5,b=0,col="red")
+abline(a=13.8,b=0,col="blue")
+```
+We can make the cuts divide the tree into 2 and 5 clusters respectively. 
+
+```{r}
+cut <-as.vector(cutree(hierachy_bfi,k=2 ))
+clust_means <- aggregate(bfi_new, by=list(cut), FUN=mean)
+tail(unlist(sort(clust_means[1, names(clust_means)!="Group.1"])))
+```
+
+```{r}
+tail(topvars_cent2)
+```
+
+```{r}
+tail(unlist(sort(clust_means[2, names(clust_means)!="Group.1"])))
+```
+
+```{r}
+tail(topvars_cent1)
+```
+We can see the output matches the results from 3. Similar high scoring variables can be observed using kmeans and cut tree combined output.
+
+## 5
+Factors are dimensional and directional for each factor. They have two directions and we care about interpreting the factors on the ends.
+
+Clusters are like grouping the variables together with some criteria. The first cluster depicts a negative personality who gets angry, depressed and wastes time whereas the second cluster depicts friendly personality, who is helpful and comforting to others. So basically clustering is aggregating the attributes of variables together, and the number of clusters is more like a threshold to distinguish one from the other.

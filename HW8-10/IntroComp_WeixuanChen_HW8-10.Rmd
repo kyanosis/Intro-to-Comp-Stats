@@ -1,0 +1,380 @@
+---
+title: "IntroComp_Weixuan_Chen_HW8-10"
+author: "Weixuan Chen"
+date: "4/2/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Preparation
+
+```{r}
+data("mtcars")
+mtcars
+```
+
+## 1
+In this homework we will build models to predict miles per gallon (MPG) from mtcars dataset. We will evaluate suitable regressors with final goal to answer these following questions:
+
+1. Is an automatic or manual transmission better for MPG?
+2. Quantify the MPG difference between automatic and manual transmissions
+
+Tests:
+H0: There is no difference in mpg value between automatic and manual transmission. 
+H1: There is a difference in mpg value between both transmission types.
+
+## 2
+General Data Description: The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973--74 models).
+
+Source: The data is the built-in dataset in r
+
+Contents:
+
+mpg: Miles/(US) gallon
+cyl: Number of cylinders
+disp:	Displacement (cu.in.)
+hp:	Gross horsepower
+drat:	Rear axle ratio
+wt:	Weight (1000 lbs)
+qsec:	1/4 mile time
+vs:	Engine (0 = V-shaped, 1 = straight)
+am:	Transmission (0 = automatic, 1 = manual)
+gear:	Number of forward gears
+
+## 3
+My dependent variable is miles per gallon(mpg). We investigate differences in transmission type on mpg value with a t-test.
+I hypothesize that Miles Per Gallon could be mainly affected by transmission type of cars.
+
+## 4
+
+```{r}
+library(dplyr)
+glimpse(mtcars)
+```
+
+Since the number of independent variables is 11, I am considering total 11 variables for my regression model.
+
+So, my independent variables are:
+```{r}
+colnames(mtcars[2:11])
+```
+
+```{r}
+plot(mtcars$disp, mtcars$mpg, xlab = "disp", ylab = "mpg", pch=19)
+df3 <- par(no.readonly = T)
+par(mfrow = c(4,4))
+library(ggplot2)
+library(gridExtra)
+p1 <- ggplot(data = mtcars) +
+    geom_point(mapping = aes(x=mtcars$hp, y=mtcars$mpg), color='blue')+
+    xlab("hp") + ylab("mpg") +
+    ggtitle("hp VS mpg")
+
+p2 <- ggplot(data = mtcars) +
+  geom_point(mapping = aes(x=mtcars$drat, y=mtcars$mpg), color='red')+
+  xlab("drat") + ylab("mpg") +
+  ggtitle("drat Vs mpg")
+  
+p3 <- ggplot(data = mtcars) +
+  geom_point(mapping = aes(x=mtcars$wt, y=mtcars$mpg), color='green')+
+  xlab("wt") + ylab("mpg") +
+  ggtitle("wt Vs mpg")
+  
+p4 <- ggplot(data = mtcars)+
+  geom_point(mapping = aes(x=mtcars$qsec, y=mtcars$mpg), color='black') +
+  xlab("qsec") + ylab("mpg") +
+  ggtitle("qsec Vs mpg")
+
+grid.arrange(p1, p2, p3, p4, ncol=2)
+```
+
+Prior to running the regression, plotting am vs mpg, we can see a negative trend between disp vs mpg.
+
+I have also plotted a scatter plot of the numerical variables (excluding categorical variables) and some of them also show a slight trend.
+
+## 5
+For recoding the categorical variables, I follow the process of dummy encoding by converting it into numeric binaries of 1,0.
+
+```{r}
+levels(factor(mtcars$cyl))
+levels(factor(mtcars$am))
+levels(factor(mtcars$vs))
+levels(factor(mtcars$gear))
+levels(factor(mtcars$carb))
+```
+
+
+```{r}
+# Dummy coding to convert categorical variables to numeric
+# For variable 'cyl'
+mtcars$cyl_4 <- ifelse(mtcars$cyl == 4,1,0) 
+mtcars$cyl_6 <- ifelse(mtcars$cyl == 6,1,0) 
+mtcars$cyl_8 <- ifelse(mtcars$cyl == 8,1,0)
+# For variable 'am'
+mtcars$am_0 <- ifelse(mtcars$am == 0,1,0) 
+mtcars$am_1 <- ifelse(mtcars$am == 1,1,0) 
+# For variable 'vs'
+mtcars$vs_0 <- ifelse(mtcars$vs == 0,1,0) 
+mtcars$vs_1 <- ifelse(mtcars$vs == 1,1,0) 
+# For variable 'gear'
+mtcars$gear_3 <- ifelse(mtcars$gear == 3,1,0) 
+mtcars$gear_4 <- ifelse(mtcars$gear == 4,1,0) 
+mtcars$gear_5 <- ifelse(mtcars$gear == 5,1,0)
+# For variable 'carb'
+mtcars$carb_1 <- ifelse(mtcars$carb == 1,1,0) 
+mtcars$carb_2 <- ifelse(mtcars$carb == 2,1,0) 
+mtcars$carb_3 <- ifelse(mtcars$carb == 3,1,0)
+mtcars$carb_4 <- ifelse(mtcars$carb == 4,1,0) 
+mtcars$carb_6 <- ifelse(mtcars$carb == 6,1,0)
+mtcars$carb_8 <- ifelse(mtcars$carb == 8,1,0)
+``` 
+
+```{r}
+head(mtcars)
+```
+
+```{r}
+# Dropping Make and Type since already dummies have been created
+mtcars <- subset(mtcars, select = -c(cyl, am, vs, gear, carb))
+cor(mtcars)
+```
+
+Checking the correlation to find the relationship between independent variables.
+
+```{r}
+library(reshape2)
+```
+
+
+```{r}
+melted_corr_mat <- melt(cor(mtcars))
+ 
+# plotting the correlation heatmap
+library(ggplot2)
+ggplot(data = melted_corr_mat, aes(x=Var1, y=Var2,
+                                   fill=value)) +
+geom_tile()
+```
+
+## 6 
+
+Regressing disp on mpg:
+```{r}
+model_1 <- lm(mtcars$mpg~mtcars$disp, data = mtcars)
+summary(model_1)
+```
+We can observe that disp has a negative effect on mpg but just marginally (the p-value is very less). 
+We can interpret that 1 unit increase in disp reduces Price by 0.041215 times which is marginal. R^2 is 0.7183, which is pretty normal.
+
+Regressing hp on mpg:
+```{r}
+model_2 <- lm(mtcars$mpg~mtcars$hp, data = mtcars)
+summary(model_2)
+```
+We can observe that having hp has a negative effect on mpg.
+Further, $R^2$ is 0.60  which signifies the variation in hp with mpg
+
+Regressing cyl on mpg:
+```{r}
+model_3 <- lm(mtcars$mpg~mtcars$cyl_4 + mtcars$cyl_6 + mtcars$cyl_8, data = mtcars)
+summary(model_3)
+```
+
+We can observe that cyl has postitive impact on mpg, and R^2 is 0.7325.
+
+## 7
+
+Running the full multiple regression:
+```{r}
+model_final <- lm(mtcars$mpg~., data = mtcars)
+summary(model_final)
+```
+
+```{r}
+library(stargazer)
+```
+
+```{r}
+stargazer(model_final, no.space=TRUE, dep.var.labels=c("mpg"), 
+          covariate.labels=c("disp","hp","drat","wt","qsec","cyl_4", "cyl_6","cyl_8","am_0","am_1","vs_0", "vs_1", "gear_3", "gear_4", "gear_5", "carb_1", "carb_2", "carb_3", "carb_4", "carb_6", "carb_8"), omit.stat=c("LL","ser","f"),header=FALSE)
+```
+
+
+As, can be observed from the full model regression results:
+drat has a psoitive effect on the mpg. 
+
+We can also see the family of carb has the most negative effect on mpg.
+
+## 8
+
+```{r}
+m1 <- lm(mtcars$mpg~mtcars$disp, data = mtcars)
+summary(m1)
+```
+
+```{r}
+m2<- lm(mtcars$mpg~mtcars$disp+mtcars$cyl_4+mtcars$cyl_6+mtcars$cyl_8, data = mtcars)
+summary(m2)
+```
+
+```{r}
+m3 <- lm(mtcars$mpg~mtcars$disp+mtcars$cyl_4+mtcars$cyl_6+mtcars$cyl_8+mtcars$am_0+mtcars$am_1+mtcars$vs_0+mtcars$vs_1, data = mtcars)
+summary(m3)
+```
+disp becomes more significant when additional predictor variables, cyl, am, and vs are added to the regression model.
+This arises because of a Spurious relationship.
+
+## 9
+From my earlier hypothesis that cyl has negative and disp fetch positiv mpg is true from the regression models. It matched my hypothesis since the final regression model did not show any kind of a spurious/chained effect on the variables.
+
+## 10
+
+The $R^2 (0.8931)$ and the adjusted $R^2(0.779)$ suggest are almost same which suggest the model does not overfit and the high $R^2$ is just not because of the large number of predictor variables. 
+The mediocore value also signifies the model has just accuracy and is a normal model.
+
+## 11
+
+```{r}
+Full_Model_BR <- lm(mtcars$mpg~., data = na.omit(mtcars))
+step(Full_Model_BR, direction = "backward", trace = F)
+summary(Full_Model_BR)
+```
+I have used the backward elimination method to find out the most significant variables.
+The most important variables are the disp, hp, wt, cyl, gear, carb in the vehicle which is close to what we had hypothesized earlier. 
+
+## 12 
+I am getting a large number of predictor variables as the significant ones. 
+The high R squared value could be misleading and can actually be due to modeling random noise due to the large number of predictor variables.
+I believe since the number of significant variables is quite large,it would make great sense to do some variable reduction operation so as to avoid overfitting.
+
+## 13 
+
+a. Derive the coefficients from your regression using the (X'X)^-1X'Y formula. (If you run into problems using solve(), try using ginv() instead, which does the same thing but is a bit more robust.)
+
+```{r}
+model_final <- lm(mtcars$mpg~., data = mtcars)
+summary(model_final)
+```
+Now, lets derive it using matrix algebra, $t(X)$ is R's notation for X' and solve(X) is R's notation for $X^{-1}$.
+
+```{r}
+xmat <- as.matrix(cbind(mtcars$disp, mtcars$hp, mtcars$drat, mtcars$wt, mtcars$qsec, mtcars$cyl_4, mtcars$cyl_6, mtcars$cyl_8, mtcars$am_0, mtcars$am_1, mtcars$vs_0, mtcars$vs_1, mtcars$gear_3, mtcars$gear_4, mtcars$gear_5, mtcars$carb_1, mtcars$carb_2, mtcars$carb_3, mtcars$carb_4, mtcars$carb_6, mtcars$carb_8))
+xmat <- cbind(1,xmat) # add the column's of 1
+head(xmat)
+```
+
+```{r}
+#now we solve for Beta in one step: (X'X)^-1 X'Y :
+library(MASS)
+ginv(t(xmat)%*%xmat) %*% t(xmat)%*%mtcars$mpg
+```
+Above are the coefficients obtained by the $X'X^{-1} X'Y$
+
+
+b. For one of the coefficients, confirm its p value as shown in the regression output using the coefficient,its standard error, and pt() in R.
+
+Lets consider the coeeficients of our first regression model: disp Vs mpg
+```{r}
+model_1
+summary(model_1)
+```
+
+Checking using coefficient, std error and pt() we observe:
+Here, t statistic=-8.747
+
+```{r}
+pt(-8.747,30)
+```
+
+c. Calculate the R2 and adjusted R2 using R, and confirm that your results match the regression output.
+
+Ans:
+
+$R^{2} = \frac{TSS - SSE}{TSS}$
+$SSE = \sum_{i} (y_{i} - \hat{y}_{i})^{2}$
+$TSS = \sum_{i} (y_{i} - \bar{y})^{2}$
+
+Computing $R^2$:
+```{r}
+ypred <- predict(model_final)
+# and the rest of it is done as we have done before:
+y <- mtcars$mpg
+tss <- sum((y - mean(y))^2)
+sse <- sum((y-ypred)^2)
+r2 <- (tss-sse)/tss
+r2
+```
+
+Computing Adjusted $R^2$:
+$\textrm{adjusted } R^2 = \frac{TSS/df_t - SSE/df_e}{TSS/df_t}$
+where, 
+$df_t = n - 1$ and $df_e = n - k - 1$
+
+```{r}
+n <- length(y)
+k <- ncol(xmat)-1
+dft <- n - 1
+dfe <- n - k - 1
+(tss/dft - sse/dfe)/ (tss/dft)
+```
+
+They almost match the regression output.
+
+d. Calulate the F statistic using R and confirm it against the regression output.
+
+Ans:
+The F statistic for the multiple regression model should look like:
+$F = \frac{R^2 / k}{(1-R^2)/(n-k-1)}$ where
+ the first degree of freedom is $df1=k$ and the second is $df2=n???k???1$.
+ So we can calculate our F statistic and the p value directly:
+ 
+ 
+```{r}
+f <- (r2/k) / ((1-r2)/(n-k-1))
+f
+```
+
+
+## 14
+
+```{r}
+Full_Model_2 <- lm(mtcars$mpg~ I(disp^2)+., data = na.omit(mtcars))
+summary(Full_Model_2)
+```
+
+```{r}
+xbar <- mean(mtcars$disp)
+y1 <- Full_Model_2$coefficients[3]*xbar + Full_Model_2$coefficients[2] * xbar^2
+y2 <- Full_Model_2$coefficients[3]*(xbar+1) + Full_Model_2$coefficients[2]*(xbar+1)^2
+y2 - y1
+```
+
+Hence, the quadratic term is insignificant at 0.05 level as 1-unit increase in the quadratic term changes y be -0.01915084 when other variables are held constant.
+
+## 15
+
+```{r}
+Full_Model_3 <- lm(mtcars$mpg~ disp*cyl_4+., data = na.omit(mtcars))
+summary(Full_Model_3)
+```
+```{r}
+mean_cyl_4 <- mean(mtcars$cyl_4)
+mean_disp <- mean(mtcars$disp)
+y1 <- Full_Model_3$coefficients[2]*mean_disp + Full_Model_3$coefficients[20]*mean_disp*mean_cyl_4
+y2 <- Full_Model_3$coefficients[2]*(mean_disp+1) +
+Full_Model_3$coefficients[20]*(mean_disp+1)*mean_cyl_4
+y2 - y1
+```
+The interaction term is significant. There is a decrease of -0.22935 in y with a 1 unit increase in disp:cyl_4 holding interaction tern at mean and other independent variables constant.
+
+## 16
+
+```{r}
+anova(model_final, Full_Model_3)
+```
+
+ Looking at the p-value, we reject the Null hypothesis.
+

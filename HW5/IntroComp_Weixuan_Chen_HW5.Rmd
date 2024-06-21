@@ -1,0 +1,95 @@
+---
+title: "IntroComp_Weixuan_HW5"
+author: "Weixuan Chen"
+date: "2/12/2023"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+4.
+Using data of your choosing (or using simulated data), use R to conduct the following tests, and explain the results you get:
+
+a. A standard one-sample hypothesis test.
+```{r}
+datasets::cars
+t.test(cars$dist,alternative="two.sided",mu=60)
+```
+Here, in the cars dataset, we have, Null Hypothesis $H_{0}: \mu=60$
+Since, p value < alpha (0.05), we reject the null hypothesis.
+
+
+
+b. A difference-in-means test with independent samples.
+
+```{r}
+s1 <- sample(15:45, 10)
+s2 <- sample(20:50, 10)
+t.test(s1,s2,mu=0,conf=0.95,alternative="two.sided")
+```
+Here, the Null hypothesis, $H_{0}:\mu=0$
+However, since the p-value = 0.0539, we cannot reject the null hypothesis at 0.05 level.
+
+
+
+c. A difference-in-means test with dependent samples (ie., a paired t-test)
+
+Here, we'll use an example data set, which contains the weight of 10 mice before and after the treatment.
+```{r}
+# Weight of the mice before treatment
+before <-c(200.1, 190.9, 192.7, 213, 241.4, 196.9, 172.2, 185.5, 205.2, 193.7)
+# Weight of the mice after treatment
+after <-c(392.9, 393.2, 345.1, 393, 434, 427.9, 422, 383.9, 392.3, 352.2)
+# Compute t-test
+t.test(before, after, paired = TRUE)
+```
+As we can see that the p value is significantly less than alpha,
+hence we reject Null hypothesis.
+
+
+
+d. Manually verify the results in (a) using the mean and sd as calculated by R (ie, you don't have to
+manually calculate the mean or sd by hand!).
+
+```{r}
+x_bar <- mean(cars$dist)
+x_bar
+```
+
+```{r}
+std_dev <- sd(cars$dist)
+std_dev
+```
+
+```{r}
+n <- length(cars$dist)
+n
+```
+```{r}
+se <- std_dev/(sqrt(n))
+se
+```
+```{r}
+mu <- 60
+z <- (x_bar - mu)/se
+z
+```
+```{r}
+low_int <- qt(0.025,n-1)
+low_int
+high_int <-qt(0.975,n-1)
+high_int
+```
+```{r}
+low_CI <- ((low_int)*se)+x_bar
+low_CI
+high_CI <- ((high_int)*se)+x_bar
+high_CI
+```
+This verifies the results from part a and Null hypothesis can be rejected since mu lies in the rejected area.
+
+
